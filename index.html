@@ -159,7 +159,7 @@ details.card p{margin:.6rem 0 0}
       <button class="btn" type="button" id="folderBtn" data-t="addFolder"></button>
       <button class="btn ghost" type="button" id="clearBtn" data-t="clear"></button>
     </div>
-    <input type="file" id="fileIn" accept="image/*,.heic,.heif,.HEIC,.HEIF" multiple hidden>
+    <input type="file" id="fileIn" accept="image/heic,image/heif,image/jpeg,image/png,image/webp,image/avif,.heic,.heif,.jpg,.jpeg,.png,.webp,.dng" multiple hidden>
     <input type="file" id="dirIn" webkitdirectory multiple hidden>
     <p class="count nums" id="addedLine"></p>
     <p class="note" data-t="addHint"></p>
@@ -726,7 +726,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
 </script>
 <script>
 'use strict';
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 const MP_VER = '1.0.1';
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER;
 const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
@@ -743,7 +743,7 @@ zh: {
   toJpgNote:'转成 JPG 方便发 WhatsApp 和给旧电脑打开，但每张要多花约 1 秒。原文件画质最好。',
   addTitle:'加入相片', addPhotos:'＋ 选择相片', addFolder:'＋ 选择文件夹', clear:'清空',
   added:'已加入 {n} 张相片', addedHeic:'（其中 {h} 张 HEIC）', addedNone:'还没有加入相片',
-  addHint:'相册一次选不了那么多？可以分几次加入，全部都会算进去。',
+  addHint:'相册一次选不了那么多？可以分几次加入，全部都会算进去。', iosHint:'iPhone：一次选大约 100 张就好。选太多 Safari 会卡很久，甚至什么都不加入。分几次加，全部都会算进去。', preparing:'iPhone 正在准备相片，请稍等（选得越多等越久）…',
   start:'开始挑选', needPhotos:'请先加入相片。',
   fewer:'你只加入了 {c} 张相片，不比要保留的 {n} 张多，所以全部保留，只按时间排好。',
   stFace:'正在准备人脸模型…', st1:'第 1 步：给每张相片打分', st2:'第 2 步：细看候选相片清晰度', stDone:'完成',
@@ -789,7 +789,7 @@ en: {
   toJpgNote:'JPG is easier for WhatsApp and older PCs, but adds about 1 second per photo. Originals keep the best quality.',
   addTitle:'Add photos', addPhotos:'+ Choose photos', addFolder:'+ Choose folder', clear:'Clear',
   added:'{n} photos added', addedHeic:' ({h} HEIC)', addedNone:'No photos added yet',
-  addHint:'Can\'t select that many at once? Add them in several rounds; they all count.',
+  addHint:'Can\'t select that many at once? Add them in several rounds; they all count.', iosHint:'iPhone: select about 100 at a time. With many more, Safari stalls for minutes or adds nothing. Add in rounds; they all count.', preparing:'The iPhone is preparing the photos, please wait (more photos = longer)…',
   start:'Start picking', needPhotos:'Please add photos first.',
   fewer:'You added {c} photos, not more than the {n} to keep, so all are kept, sorted by time.',
   stFace:'Preparing the face model…', st1:'Step 1: scoring every photo', st2:'Step 2: checking sharpness of the candidates', stDone:'Done',
@@ -835,7 +835,7 @@ ms: {
   toJpgNote:'JPG lebih mudah untuk WhatsApp dan PC lama, tetapi tambah kira-kira 1 saat setiap foto. Fail asal paling berkualiti.',
   addTitle:'Tambah foto', addPhotos:'+ Pilih foto', addFolder:'+ Pilih folder', clear:'Kosongkan',
   added:'{n} foto ditambah', addedHeic:' ({h} HEIC)', addedNone:'Belum ada foto',
-  addHint:'Tak boleh pilih banyak sekali gus? Tambah beberapa kali; semuanya dikira.',
+  addHint:'Tak boleh pilih banyak sekali gus? Tambah beberapa kali; semuanya dikira.', iosHint:'iPhone: pilih kira-kira 100 setiap kali. Terlalu banyak, Safari tersekat lama atau tidak menambah apa-apa. Tambah beberapa kali; semuanya dikira.', preparing:'iPhone sedang menyediakan foto, sila tunggu (lebih banyak = lebih lama)…',
   start:'Mula pilih', needPhotos:'Sila tambah foto dahulu.',
   fewer:'Anda tambah {c} foto, tidak lebih daripada {n} yang hendak disimpan, jadi semua disimpan mengikut masa.',
   stFace:'Menyediakan model muka…', st1:'Langkah 1: memberi markah setiap foto', st2:'Langkah 2: menyemak ketajaman calon', stDone:'Selesai',
@@ -948,9 +948,14 @@ function renderAdded() {
   if (shots) s += ' · ' + t('shotsT', { n: fmtN(shots) });
   $('#addedLine').textContent = s;
 }
-$('#addBtn').addEventListener('click', () => $('#fileIn').click());
+const IS_IOS = /iPhone|iPad/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (IS_IOS) $('[data-t="addHint"]').dataset.t = 'iosHint';
+// iPhone: after the picker closes, Safari prepares the files before the change event; show that something is happening.
+let prepTimer = null;
+function pickerOpened() { clearTimeout(prepTimer); const once = () => { window.removeEventListener('focus', once); prepTimer = setTimeout(() => { if (!$('#addedLine').dataset.busy) { $('#addedLine').dataset.busy = '1'; $('#addedLine').textContent = t('preparing'); } }, 1500); }; window.addEventListener('focus', once); }
+$('#addBtn').addEventListener('click', () => { pickerOpened(); $('#fileIn').click(); });
 $('#folderBtn').addEventListener('click', () => $('#dirIn').click());
-$('#fileIn').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('#fileIn').addEventListener('change', e => { clearTimeout(prepTimer); delete $('#addedLine').dataset.busy; addFiles(e.target.files); e.target.value = ''; });
 $('#dirIn').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
 $('#clearBtn').addEventListener('click', () => { if (state.running) return; state.files = []; state.keys.clear(); state.other = 0; renderAdded(); });
 // Folder picking only works on desktop browsers.

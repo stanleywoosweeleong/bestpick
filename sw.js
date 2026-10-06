@@ -1,5 +1,5 @@
 // BestPick service worker
-const CACHE = 'bestpick-v1.1.2-20261006';
+const CACHE = 'bestpick-v1.1.3-20261006';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 // Face model + MediaPipe runtime: cached on first successful download so face checking works offline afterwards.
 const RUNTIME = [/^https:\/\/cdn\.jsdelivr\.net\/npm\/@mediapipe\//, /^https:\/\/storage\.googleapis\.com\/mediapipe-models\//];
