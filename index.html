@@ -80,6 +80,9 @@ details.card p{margin:.6rem 0 0}
 .langs .btn{min-height:3.6rem;font-size:1.2rem}
 .center{text-align:center}
 .hidden{display:none!important}
+.drop{border:3px dashed var(--line);border-radius:8px;padding:1.1rem;text-align:center;margin:.7rem 0 0;font-weight:600}
+.drop.over{border-color:var(--acc);background:#fff7f2}
+@media (min-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}}
 .tile.pk{outline:4px solid var(--ok);outline-offset:-4px}
 .tile.ex{opacity:.35}
 .tile .mk.keep{background:var(--ok)}
@@ -155,10 +158,12 @@ details.card p{margin:.6rem 0 0}
   <section class="card" id="addCard">
     <h2 data-t="addTitle"></h2>
     <div class="btns">
+      <button class="btn pri" type="button" id="folderBtn" data-t="addFolder"></button>
       <button class="btn" type="button" id="addBtn" data-t="addPhotos"></button>
-      <button class="btn" type="button" id="folderBtn" data-t="addFolder"></button>
       <button class="btn ghost" type="button" id="clearBtn" data-t="clear"></button>
     </div>
+    <div class="drop hidden" id="dropZone" data-t="dropHint"></div>
+    <p class="note hidden" id="srcLine"></p>
     <input type="file" id="fileIn" accept="image/heic,image/heif,image/jpeg,image/png,image/webp,image/avif,.heic,.heif,.jpg,.jpeg,.png,.webp,.dng" multiple hidden>
     <input type="file" id="dirIn" webkitdirectory multiple hidden>
     <p class="count nums" id="addedLine"></p>
@@ -194,6 +199,7 @@ details.card p{margin:.6rem 0 0}
   <div class="btns" id="exportBtns">
     <button class="btn pri" type="button" id="zipBtn" style="width:auto" data-t="zip"></button>
     <button class="btn" type="button" id="shareBtn" data-t="toPhotos"></button>
+    <button class="btn pri hidden" type="button" id="srcOutBtn" style="width:auto"></button>
     <button class="btn" type="button" id="dirOutBtn" data-t="toFolder"></button>
     <button class="btn" type="button" id="pcBtn" data-t="toPc"></button>
   </div>
@@ -726,7 +732,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
 </script>
 <script>
 'use strict';
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.2.0';
 const MP_VER = '1.0.1';
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER;
 const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
@@ -741,7 +747,7 @@ zh: {
   skipShots:'截图', yes:'跳过截图', no:'也一起挑',
   heicOut:'保存 HEIC 相片时', keepHeic:'保留原文件', toJpg:'转成 JPG',
   toJpgNote:'转成 JPG 方便发 WhatsApp 和给旧电脑打开，但每张要多花约 1 秒。原文件画质最好。',
-  addTitle:'加入相片', addPhotos:'＋ 选择相片', addFolder:'＋ 选择文件夹', clear:'清空',
+  addTitle:'加入相片', addPhotos:'＋ 选择相片', addFolder:'＋ 选择文件夹（含子文件夹）', clear:'清空', dropHint:'也可以把文件夹或相片拖到这里', srcFolder:'文件夹：{f}', saveNext:'保存到 {f}\\{sub}', savedNext:'已把 {n} 张保存到 {sub} 文件夹（在同一个文件夹里）。', deskHint:'电脑上选整个文件夹最快：相片精选会读取所有子文件夹，用全部 CPU 核心打分，挑好后一键存回同一个文件夹。',
   added:'已加入 {n} 张相片', addedHeic:'（其中 {h} 张 HEIC）', addedNone:'还没有加入相片',
   addHint:'相册一次选不了那么多？可以分几次加入，全部都会算进去。', iosHint:'iPhone：一次选大约 100 张就好。选太多 Safari 会卡很久，甚至什么都不加入。分几次加，全部都会算进去。', preparing:'iPhone 正在准备相片，请稍等（选得越多等越久）…',
   start:'开始挑选', needPhotos:'请先加入相片。',
@@ -787,7 +793,7 @@ en: {
   skipShots:'Screenshots', yes:'Skip screenshots', no:'Include them',
   heicOut:'When saving HEIC photos', keepHeic:'Keep original', toJpg:'Convert to JPG',
   toJpgNote:'JPG is easier for WhatsApp and older PCs, but adds about 1 second per photo. Originals keep the best quality.',
-  addTitle:'Add photos', addPhotos:'+ Choose photos', addFolder:'+ Choose folder', clear:'Clear',
+  addTitle:'Add photos', addPhotos:'+ Choose photos', addFolder:'+ Choose folder (with subfolders)', clear:'Clear', dropHint:'Or drop a folder or photos here', srcFolder:'Folder: {f}', saveNext:'Save into {f}\\{sub}', savedNext:'{n} photos saved to the {sub} folder inside the same folder.', deskHint:'On a computer, choosing the whole folder is fastest: all subfolders are read, every CPU core scores, and the picks are saved back into the same folder with one click.',
   added:'{n} photos added', addedHeic:' ({h} HEIC)', addedNone:'No photos added yet',
   addHint:'Can\'t select that many at once? Add them in several rounds; they all count.', iosHint:'iPhone: select about 100 at a time. With many more, Safari stalls for minutes or adds nothing. Add in rounds; they all count.', preparing:'The iPhone is preparing the photos, please wait (more photos = longer)…',
   start:'Start picking', needPhotos:'Please add photos first.',
@@ -833,7 +839,7 @@ ms: {
   skipShots:'Tangkapan skrin', yes:'Langkau tangkapan skrin', no:'Sertakan',
   heicOut:'Semasa menyimpan foto HEIC', keepHeic:'Kekal asal', toJpg:'Tukar ke JPG',
   toJpgNote:'JPG lebih mudah untuk WhatsApp dan PC lama, tetapi tambah kira-kira 1 saat setiap foto. Fail asal paling berkualiti.',
-  addTitle:'Tambah foto', addPhotos:'+ Pilih foto', addFolder:'+ Pilih folder', clear:'Kosongkan',
+  addTitle:'Tambah foto', addPhotos:'+ Pilih foto', addFolder:'+ Pilih folder (dengan subfolder)', clear:'Kosongkan', dropHint:'Atau seret folder atau foto ke sini', srcFolder:'Folder: {f}', saveNext:'Simpan ke {f}\\{sub}', savedNext:'{n} foto disimpan ke folder {sub} di dalam folder yang sama.', deskHint:'Di komputer, memilih seluruh folder paling pantas: semua subfolder dibaca, semua teras CPU menilai, dan pilihan disimpan semula ke folder yang sama dengan satu klik.',
   added:'{n} foto ditambah', addedHeic:' ({h} HEIC)', addedNone:'Belum ada foto',
   addHint:'Tak boleh pilih banyak sekali gus? Tambah beberapa kali; semuanya dikira.', iosHint:'iPhone: pilih kira-kira 100 setiap kali. Terlalu banyak, Safari tersekat lama atau tidak menambah apa-apa. Tambah beberapa kali; semuanya dikira.', preparing:'iPhone sedang menyediakan foto, sila tunggu (lebih banyak = lebih lama)…',
   start:'Mula pilih', needPhotos:'Sila tambah foto dahulu.',
@@ -954,12 +960,52 @@ if (IS_IOS) $('[data-t="addHint"]').dataset.t = 'iosHint';
 let prepTimer = null;
 function pickerOpened() { clearTimeout(prepTimer); const once = () => { window.removeEventListener('focus', once); prepTimer = setTimeout(() => { if (!$('#addedLine').dataset.busy) { $('#addedLine').dataset.busy = '1'; $('#addedLine').textContent = t('preparing'); } }, 1500); }; window.addEventListener('focus', once); }
 $('#addBtn').addEventListener('click', () => { pickerOpened(); $('#fileIn').click(); });
-$('#folderBtn').addEventListener('click', () => $('#dirIn').click());
+const IS_DESKTOP = !/Android|iPhone|iPad/i.test(navigator.userAgent) && !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (IS_DESKTOP) { $('[data-t="addHint"]').dataset.t = 'deskHint'; $('#dropZone').classList.remove('hidden'); }
+// Source folder (Chrome/Edge): read+write handle so picks can be saved back next to the originals.
+let srcDir = null;
+function setSrc(handle) { srcDir = handle; const l = $('#srcLine'); if (handle) { l.textContent = t('srcFolder', { f: handle.name }); l.classList.remove('hidden'); } else l.classList.add('hidden'); }
+async function walkHandle(dir, prefix, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'file') { try { const f = await h.getFile(); if (prefix) Object.defineProperty(f, 'relPath', { value: prefix + name }); out.push(f); } catch (e) { } }
+    else if (h.kind === 'directory' && !/^BestPick-/.test(name)) await walkHandle(h, prefix + name + '/', out);
+  }
+  return out;
+}
+async function walkEntry(entry, out) {
+  if (entry.isFile) await new Promise(r => entry.file(f => { out.push(f); r(); }, () => r()));
+  else if (entry.isDirectory && !/^BestPick-/.test(entry.name)) {
+    const rd = entry.createReader(); let batch;
+    do { batch = await new Promise(r => rd.readEntries(r, () => r([]))); for (const e of batch) await walkEntry(e, out); } while (batch.length);
+  }
+  return out;
+}
+async function pickFolder() {
+  if ('showDirectoryPicker' in window) {
+    try { const h = await window.showDirectoryPicker({ mode: 'readwrite' }); setSrc(h); $('#addedLine').textContent = '…'; addFiles(await walkHandle(h, '', [])); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  $('#dirIn').click();
+}
+$('#folderBtn').addEventListener('click', pickFolder);
+const dz = $('#dropZone');
+['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', async e => {
+  const items = [...(e.dataTransfer.items || [])]; const out = [];
+  for (const it of items) {
+    if (it.kind !== 'file') continue;
+    if (it.getAsFileSystemHandle) { try { const h = await it.getAsFileSystemHandle(); if (h && h.kind === 'directory') { if (!srcDir) setSrc(h); await walkHandle(h, '', out); continue; } } catch (x) { } }
+    const en = it.webkitGetAsEntry && it.webkitGetAsEntry(); if (en) await walkEntry(en, out); else { const f = it.getAsFile(); if (f) out.push(f); }
+  }
+  addFiles(out);
+});
 $('#fileIn').addEventListener('change', e => { clearTimeout(prepTimer); delete $('#addedLine').dataset.busy; addFiles(e.target.files); e.target.value = ''; });
-$('#dirIn').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
-$('#clearBtn').addEventListener('click', () => { if (state.running) return; state.files = []; state.keys.clear(); state.other = 0; renderAdded(); });
+$('#dirIn').addEventListener('change', e => { setSrc(null); addFiles(e.target.files); e.target.value = ''; });
+$('#clearBtn').addEventListener('click', () => { if (state.running) return; state.files = []; state.keys.clear(); state.other = 0; setSrc(null); renderAdded(); });
 // Folder picking only works on desktop browsers.
-if (!('webkitdirectory' in document.createElement('input')) || /Android|iPhone|iPad/i.test(navigator.userAgent)) $('#folderBtn').classList.add('hidden');
+if (!IS_DESKTOP) $('#folderBtn').classList.add('hidden');
 
 /* ================= score cache (IndexedDB) ================= */
 // Photos already scored on this device are not scored again: a reload or a second run only costs the new photos.
@@ -1032,7 +1078,7 @@ let pool = null;
 function getPool() {
   if (pool) return pool;
   const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 4;
-  pool = new Pool(Math.max(1, Math.min(mem >= 6 ? 3 : 2, cores - 1)));
+  pool = new Pool(IS_DESKTOP ? Math.max(2, Math.min(8, cores - 1)) : Math.max(1, Math.min(mem >= 6 ? 3 : 2, cores - 1)));
   return pool;
 }
 
@@ -1380,6 +1426,9 @@ function renderResults() {
   $('#exportBar').classList.toggle('hidden', !state.picked.length);
   $('#shareBtn').classList.toggle('hidden', !canShareFiles() || !/Android|iPhone|iPad/i.test(navigator.userAgent));
   $('#dirOutBtn').classList.toggle('hidden', !('showDirectoryPicker' in window));
+  $('#pcBtn').classList.toggle('hidden', IS_DESKTOP);
+  const sb = $('#srcOutBtn'); sb.classList.toggle('hidden', !srcDir); if (srcDir) sb.textContent = t('saveNext', { f: srcDir.name, sub: 'BestPick-' + state.picked.length });
+  $('#zipBtn').classList.toggle('pri', !srcDir);
 }
 function tile(r, onClick, cls) {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'tile' + (cls ? ' ' + cls : '');
@@ -1667,20 +1716,35 @@ $('#shareBtn').addEventListener('click', async () => {
   } catch (e) { $('#exportMsg').textContent = t('exportFail', { e: e.message }); }
   busy = false;
 });
+async function writeInto(dir) {
+  const items = await getExport();
+  for (let i = 0; i < items.length; i++) {
+    $('#exportMsg').textContent = t('building', { i: i + 1, n: items.length });
+    let name = items[i].name, k = 1;
+    const base = name.replace(/(\.[^.]*)?$/, ''), ext = (name.match(/\.[^.]*$/) || [''])[0];
+    while (await dir.getFileHandle(name).then(() => true, () => false)) { k++; name = base + ' (' + k + ')' + ext; }
+    const fh = await dir.getFileHandle(name, { create: true });
+    const w = await fh.createWritable(); await w.write(items[i].blob); await w.close();
+  }
+  return items.length;
+}
+$('#srcOutBtn').addEventListener('click', async () => {
+  if (busy || !srcDir) return; busy = true;
+  try {
+    if (srcDir.requestPermission && (await srcDir.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('permission');
+    const sub = 'BestPick-' + state.picked.length;
+    const dir = await srcDir.getDirectoryHandle(sub, { create: true });
+    const n = await writeInto(dir);
+    $('#exportMsg').textContent = t('savedNext', { n: fmtN(n), sub });
+  } catch (e) { if (e.name !== 'AbortError') $('#exportMsg').textContent = t('exportFail', { e: e.message }); }
+  busy = false;
+});
 $('#dirOutBtn').addEventListener('click', async () => {
   if (busy) return; busy = true;
   try {
     const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
-    const items = await getExport();
-    for (let i = 0; i < items.length; i++) {
-      $('#exportMsg').textContent = t('building', { i: i + 1, n: items.length });
-      let name = items[i].name, k = 1;
-      const base = name.replace(/(\.[^.]*)?$/, ''), ext = (name.match(/\.[^.]*$/) || [''])[0];
-      while (await dir.getFileHandle(name).then(() => true, () => false)) { k++; name = base + ' (' + k + ')' + ext; }
-      const fh = await dir.getFileHandle(name, { create: true });
-      const w = await fh.createWritable(); await w.write(items[i].blob); await w.close();
-    }
-    $('#exportMsg').textContent = t('dirDone', { n: items.length });
+    const n = await writeInto(dir);
+    $('#exportMsg').textContent = t('dirDone', { n: fmtN(n) });
   } catch (e) { if (e.name !== 'AbortError') $('#exportMsg').textContent = t('exportFail', { e: e.message }); }
   busy = false;
 });
@@ -1694,7 +1758,7 @@ const PC = { ok: false, authed: false, base: '', pin: store.get('pcPin', '') };
 const pcH = () => PC.pin ? { 'X-PIN': PC.pin } : {};
 async function pcPing(base) {
   const r = await fetch(base + '/api/ping', { cache: 'no-store', headers: pcH() }); const d = await r.json();
-  if (!d || d.name !== 'BestPick Transfer') throw new Error('not BestPick Transfer');
+  if (!d || (d.name !== 'TransferBridge' && d.name !== 'BestPick Transfer')) throw new Error('not TransferBridge');
   return d;
 }
 async function pcProbe() {
